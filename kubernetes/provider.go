@@ -61,6 +61,12 @@ func Provider() *schema.Provider {
 				DefaultFunc: schema.EnvDefaultFunc("KUBE_INSECURE", false),
 				Description: "Whether server should be accessed without verifying the TLS certificate.",
 			},
+			"in_cluster_ok": {
+				Type:        schema.TypeBool,
+				Optional:    true,
+				DefaultFunc: schema.EnvDefaultFunc("IN_CLUSTER_OK", false),
+				Description: "Whether the client config can fall back to in cluster config.",
+			},
 			"client_certificate": {
 				Type:        schema.TypeString,
 				Optional:    true,
@@ -380,6 +386,15 @@ func initializeConfiguration(d *schema.ResourceData) (*restclient.Config, error)
 	if err != nil {
 		log.Printf("[WARN] Invalid provider configuration was supplied. Provider operations likely to fail: %v", err)
 		return nil, nil
+	}
+
+	if inClusterOK, ok := d.GetOk("in_cluster_ok"); ok && inClusterOK.(bool) && cfg == nil {
+		log.Printf("Using in cluster config")
+		cfg, err = restclient.InClusterConfig()
+		if err != nil {
+			log.Printf("[WARN] Could not build in cluster config. Provider operations likely to fail: %v", err)
+			return nil, nil
+		}
 	}
 
 	return cfg, nil
